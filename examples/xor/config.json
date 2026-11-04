@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "name": "XOR matched Mac native evidence",
+  "objective": {
+    "metric": "median_latency_ms",
+    "direction": "minimize",
+    "unit": "ms",
+    "min_improvement": 0
+  },
+  "constraints": [
+    {"metric": "evidence_gate_pass", "op": "==", "value": 1}
+  ],
+  "evaluator": {
+    "adapter": "evaluate.py",
+    "timeout_seconds": 120,
+    "assets": [
+      "xor/prototype/checker-promotion.js",
+      "xor/prototype/evaluate-checker-native.js",
+      "research/reference.json",
+      "research/qualification.json",
+      "research/requests.jsonl",
+      "research/native-runner"
+    ]
+  }
+}

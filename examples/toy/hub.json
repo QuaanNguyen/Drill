@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "name": "Integer target search",
+  "objective": {
+    "metric": "squared_error",
+    "direction": "minimize",
+    "unit": "error",
+    "min_improvement": 1
+  },
+  "constraints": [
+    {"metric": "constraint_violations", "op": "==", "value": 0}
+  ],
+  "evaluator": {
+    "adapter": "evaluator.py",
+    "timeout_seconds": 10
+  },
+  "agent": {
+    "adapter": "agent.py",
+    "timeout_seconds": 20
+  },
+  "workspace": {
+    "root": ".worktrees/drill"
+  }
+}

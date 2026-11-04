@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "drill"
+version = "0.1.0"
+description = "Research experiments with saved evidence and separate Git worktrees"
+requires-python = ">=3.11.8"
+dependencies = []
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: Apache Software License"]
+
+[project.urls]
+Repository = "https://github.com/QuaanNguyen/Drill"
+Issues = "https://github.com/QuaanNguyen/Drill/issues"
+
+[project.scripts]
+drill = "drill.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["drill*"]

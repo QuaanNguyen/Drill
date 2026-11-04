@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Drill">
+  <title>Drill</title>
+  <rect width="512" height="512" fill="#000000"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="256" cy="256" r="176"/>
+    <path d="M 232 81.644 L 232 242 C 232 304 114 326 80 256"/>
+    <path d="M 232 81.644 L 232 242 C 232 304 114 326 80 256" transform="rotate(180 256 256)"/>
+  </g>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 480" role="img" aria-label="Drill">
+  <title>Drill</title>
+  <rect width="1600" height="480" fill="#FFFFFF"/>
+  <g transform="translate(48 48) scale(0.75)">  <rect width="512" height="512" fill="#FFFFFF"/>
+  <g fill="none" stroke="#000000" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="256" cy="256" r="176"/>
+    <path d="M 232 81.644 L 232 242 C 232 304 114 326 80 256"/>
+    <path d="M 232 81.644 L 232 242 C 232 304 114 326 80 256" transform="rotate(180 256 256)"/>
+  </g></g>
+  <text x="530" y="290" font-family="Menlo,monospace" font-size="150" font-weight="700" letter-spacing="14" fill="#000000">DRILL</text>
+  <g fill="#000000"><rect x="1370" y="352" width="2" height="2"/><rect x="1386" y="336" width="2" height="2"/><rect x="1386" y="384" width="2" height="2"/><rect x="1402" y="320" width="2" height="2"/><rect x="1402" y="368" width="2" height="2"/><rect x="1418" y="352" width="2" height="2"/><rect x="1434" y="336" width="2" height="2"/><rect x="1434" y="384" width="2" height="2"/><rect x="1450" y="320" width="2" height="2"/><rect x="1450" y="368" width="2" height="2"/><rect x="1466" y="352" width="2" height="2"/><rect x="1482" y="336" width="2" height="2"/><rect x="1482" y="384" width="2" height="2"/><rect x="1498" y="320" width="2" height="2"/><rect x="1498" y="368" width="2" height="2"/><rect x="1514" y="352" width="2" height="2"/></g>
+</svg>

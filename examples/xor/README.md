@@ -42,6 +42,7 @@ The runner, request file, original evidence, qualification registration, and nat
 The adapter checks model bytes against the committed candidate model and runner bytes against the frozen runner.
 Committing real model and runner binaries can make the research repository large.
 Git LFS pointer files do not satisfy the model and runner byte checks.
+Enable LFS materialization and provide verified local objects or explicitly allow downloads before initializing such a campaign.
 Do not expose private evaluation requests through a public repository.
 
 ## Campaign

@@ -208,8 +208,18 @@ class WorkflowTests(unittest.TestCase):
         html = Path(output['path']).read_text()
         self.assertIn('&lt;script&gt;', html)
         self.assertNotIn('<script>alert', html)
-        self.assertIn('#4AAEED', html)
+        self.assertIn('prefers-color-scheme', html)
+        self.assertNotIn('#4AAEED', html)
         self.assertNotIn('cdn.', html)
+
+    def test_current_agent_is_the_default_driver(self):
+        self.initialize()
+        result = self.cli('run', '--worker', 'current', '--iterations', '3')
+        self.assertEqual(result['mode'], 'current_agent')
+        self.assertEqual(result['iterations'], 3)
+        self.assertEqual(result['worker']['worker'], 'current')
+        self.assertEqual(self.cli('status')['attempt_count'], 1)
+        self.assertIn('Do not select a provider', result['task'])
 
     def test_bounded_agent_loop(self):
         self.config['agent'] = {'adapter': 'agent.py', 'timeout_seconds': 10}
@@ -408,6 +418,59 @@ drill.cli.main()
             self.assertEqual(process.returncode, 0, stdout + stderr)
         self.assertEqual(json.loads((self.repo / '.drill/active.json').read_text()), {'campaign': 'trial'})
         self.assertEqual(list((self.repo / '.drill').glob('.active.json-*.tmp')), [])
+
+    def test_missing_lfs_input_remains_a_readable_invalid_attempt(self):
+        (self.repo / 'model.bin').write_text('version https://git-lfs.github.com/spec/v1\noid sha256:' + 'a' * 64 + '\nsize 10\n')
+        self.git('add', 'model.bin')
+        self.git('commit', '-qm', 'Track an unavailable data object')
+        self.initialize(baseline=False)
+        self.assertEqual(self.cli('baseline')['verdict'], 'INVALID')
+        status = self.cli('status')
+        self.assertIsNone(status['incumbent'])
+        self.assertEqual(status['attempts'][0]['verdict'], 'INVALID')
+
+    def test_setup_materializes_and_freezes_real_evaluator_asset_bytes(self):
+        import hashlib
+        payload = b'local model bytes for the integration fixture'
+        oid = hashlib.sha256(payload).hexdigest()
+        (self.repo / 'model.bin').write_text(f'version https://git-lfs.github.com/spec/v1\noid sha256:{oid}\nsize {len(payload)}\n')
+        self.git('add', 'model.bin')
+        self.git('commit', '-qm', 'Register local data')
+        cache = self.repo / '.git/lfs/objects' / oid[:2] / oid[2:4] / oid
+        cache.parent.mkdir(parents=True)
+        cache.write_bytes(payload)
+        settings = self.repo / '.drill/settings.json'
+        settings.parent.mkdir()
+        settings.write_text(json.dumps({'materialization': {'lfs': True}}))
+        self.config['evaluator']['assets'] = ['model.bin']
+        self.assertEqual(self.initialize()['verdict'], 'BASELINE')
+        self.assertEqual((self.campaign / 'evaluation/assets/model.bin').read_bytes(), payload)
+        evidence = json.loads((self.campaign / 'attempts/000001/materialization.json').read_text())
+        self.assertEqual(evidence[0]['sha256'], oid)
+        self.assertTrue(json.loads((self.campaign / 'config.json').read_text())['materialization']['lfs'])
+
+    def test_submodule_assets_and_source_use_the_exact_registered_commit(self):
+        child = self.base / 'dependency'
+        child.mkdir()
+        self.git('init', '-q', cwd=child)
+        self.git('config', 'user.email', 'fixture@example.invalid', cwd=child)
+        self.git('config', 'user.name', 'Dependency Fixture', cwd=child)
+        (child / 'data.json').write_text('{"dataset":"original"}')
+        self.git('add', 'data.json', cwd=child)
+        self.git('commit', '-qm', 'Register the dataset', cwd=child)
+        expected = self.git('rev-parse', 'HEAD', cwd=child)
+        self.git('-c', 'protocol.file.allow=always', 'submodule', 'add', str(child), 'dependency')
+        self.git('commit', '-qm', 'Pin the dependency')
+        self.config['materialization'] = {'submodules': True}
+        self.config['evaluator']['assets'] = ['dependency/data.json']
+        self.assertEqual(self.initialize()['verdict'], 'BASELINE')
+        self.assertEqual((self.campaign / 'evaluation/assets/dependency/data.json').read_text(), '{"dataset":"original"}')
+        (self.repo / 'dependency/data.json').write_text('{"dataset":"uncommitted"}')
+        self.assertEqual(self.step({'value': 12})['verdict'], 'ACCEPTED')
+        source = self.campaign / 'attempts/000002/source/dependency/data.json'
+        self.assertEqual(source.read_text(), '{"dataset":"original"}')
+        evidence = json.loads((self.campaign / 'attempts/000002/materialization.json').read_text())
+        self.assertEqual(evidence[0]['commit'], expected)
 
     def test_reinitialization_preserves_evidence(self):
         self.initialize()

@@ -49,23 +49,38 @@ The installed package includes the license files, runs the five-experiment toy l
 The public export excludes local audit history, campaign state, worktrees, credentials, and machine-specific absolute paths.
 The private extraction history remains local.
 
-## Remaining concerns
+## Dashboard and data follow-up
 
-- A real coding-agent adapter is still required for users who want the automatic loop to edit a real project.
-  The supplied agent is a deterministic example, so this affects every user without their own adapter.
-  The completion check is a real assistant run with a bounded iteration budget and preserved worker ownership.
-  See [the coding-agent adapter task](https://github.com/QuaanNguyen/Drill/issues/3).
-- The XOR adapter has synthetic-evidence coverage, but no real model measurement or qualification result from this publication.
-  Treating those tests as a model result would be incorrect.
-  Completion requires reviewed native evidence under XOR's existing checks.
-  See [the native XOR evidence task](https://github.com/QuaanNguyen/Drill/issues/4).
-- Dashboard content and evidence links pass checks, but its browser layout still needs a completed visual review.
-  Layout defects remain unproven until desktop and narrow-width screenshots exist.
-  See [the dashboard review task](https://github.com/QuaanNguyen/Drill/issues/5).
-- Source snapshots reject Git submodules and retain Git LFS pointer text.
-  This blocks automatic use of those dependencies and data unless an adapter materializes them.
-  Completion requires explicit, hashed materialization with failure checks for unavailable or changed objects.
-  See [the external-data task](https://github.com/QuaanNguyen/Drill/issues/6).
+The default research driver is the agent already working in the repository.
+A bounded handoff supplies the owned checkout, goal history, objective, constraints, and experiment history.
+Separate coding-agent commands remain explicit configuration.
+The local dashboard offers an optional chat-completions connection, called only after the user submits a prompt.
+Tests exercise a real local HTTP service, environment-only credentials, rejected cross-origin writes, and sanitized failures.
+No external model provider was called during verification.
+See [the agent integration task](https://github.com/QuaanNguyen/Drill/issues/3).
+
+The dashboard uses automatic light and dark media preferences with matching SVG assets.
+Manual browser review covered both appearances, a narrow layout, saved goals and setup after reload, local model calls, empty campaigns, and all experiment decisions.
+The browser review found small chart labels on narrow screens; the chart now uses the available width with readable labels.
+See [the dashboard review task](https://github.com/QuaanNguyen/Drill/issues/5).
+
+Submodules and Git LFS files can be materialized explicitly from local Git storage.
+Fetching missing inputs requires a separate opt-in.
+Submodules use exact recorded commits; LFS bytes must match their recorded hash and size.
+Real Git fixtures cover nested submodules, local remotes, missing inputs, altered objects, and evaluator assets.
+Existing campaigns retain their saved runtime and configuration.
+See [data support](data.md) and [the external-data task](https://github.com/QuaanNguyen/Drill/issues/6).
+
+The independent follow-up review found no remaining source blockers after fixes for credential-error disclosure and hidden integrity warnings.
+The core verifier passed 52 tests and eight synthetic XOR adapter tests.
+The previous-version compatibility check preserved all 17 protected files.
+
+## Remaining concern
+
+The XOR adapter has synthetic-evidence coverage, but no real model measurement or qualification result from this publication.
+Treating those tests as a model result would be incorrect.
+Completion requires reviewed native evidence under XOR's existing checks.
+See [the native XOR evidence task](https://github.com/QuaanNguyen/Drill/issues/4).
 
 ## Before merging command changes
 

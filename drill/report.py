@@ -1,42 +1,51 @@
 import html
+import json
 
+from drill.dashboard_ui import SCRIPT, STYLE
 from drill.logo import svg
-from pathlib import Path
+from drill.settings import load_goals, load_settings
+
+
+def render(state, live=False):
+    state = {'campaigns': state.get('campaigns', []), 'goals': state.get('goals', []), 'settings': state.get('settings', {}), 'errors': state.get('errors', [])}
+    selected = state['campaigns'][0] if state['campaigns'] else None
+    escape = lambda value: html.escape(str(value), quote=True)
+    title = selected['name'] if selected else 'Drill'
+    reference = selected.get('incumbent') if selected else None
+    score = reference['score'] if reference else None
+    objective = selected['objective'] if selected else {}
+    attempts = selected['attempts'] if selected else []
+    rows = []
+    for row in reversed(attempts):
+        value = '·' if row['score'] is None else f'{row["score"]:g}'
+        evidence = f'/campaigns/{selected["campaign"]}/attempts/{row["attempt_id"]}/record.json' if live else f'attempts/{row["attempt_id"]}/record.json'
+        rows.append(f'<tr><td class="mono muted">{escape(row["attempt_id"])}</td><td><span class="badge {escape(row["verdict"].lower())}">{escape(row["verdict"].lower())}</span></td><td class="mono">{escape(value)}</td><td class="hypothesis">{escape(row["hypothesis"])}</td><td class="mono muted">{escape(row["source_commit"][:10])}</td><td><a href="{escape(evidence)}">Receipt ↗</a></td></tr>')
+    serialized = json.dumps(state, allow_nan=False).replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
+    return f'''<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>{escape(title)} · Drill</title><style>{STYLE}</style></head>
+<body data-live="{str(live).lower()}"><div class="shell">
+<aside class="sidebar" aria-label="Research sidebar">
+<a href="#research" class="brand" aria-label="Drill home"><span class="logo-light">{svg()}</span><span class="logo-dark">{svg(True)}</span><span>DRILL</span></a>
+<nav class="sidebar-nav" aria-label="Main navigation"><button class="nav-button active" type="button" data-page="research" aria-current="page"><span class="nav-icon" aria-hidden="true">▦</span>Research</button><button class="nav-button" type="button" data-page="setup"><span class="nav-icon" aria-hidden="true">⌘</span>Setup</button></nav>
+<div class="side-label">Saved goals</div><div class="goal-list" id="goal-list"></div>
+<form class="goal-compose" id="goal-form"><label class="field-label" for="goal-input" hidden>New goal</label><textarea id="goal-input" placeholder="What do you want to improve?" aria-label="New goal" maxlength="4000" required></textarea><button class="primary" id="goal-save" type="submit">Save goal</button></form>
+<div class="sidebar-bottom"><div class="sidebar-note" id="offline-note" hidden>Offline report · changes disabled</div></div>
+</aside>
+<main class="main"><div class="topbar"><div class="breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><span id="breadcrumb-page">Research</span></div><div class="top-actions"><label for="campaign-select" hidden>Campaign</label><select id="campaign-select" aria-label="Campaign"></select><button type="button" id="refresh" class="icon-button" aria-label="Refresh campaign data">↻</button></div></div>
+<section id="research-page" aria-labelledby="campaign-title"><div class="page-heading"><div><h1 id="campaign-title">{escape(title)}</h1><div class="eyebrow" id="campaign-meta">{escape(objective.get('metric', ''))}</div><p class="goal-selected" id="goal-selected" hidden></p></div></div>
+<div class="stats"><div class="stat"><div class="stat-label">Best accepted result</div><div class="stat-value"><span id="current-score">{escape('·' if score is None else f'{score:g}')}</span><span class="unit" id="score-unit">{escape(objective.get('unit', ''))}</span></div></div><div class="stat"><div class="stat-label">Experiments</div><div class="stat-value" id="attempt-count">{len(attempts)}</div></div><div class="stat"><div class="stat-label">Accepted changes</div><div class="stat-value" id="accepted-count">{sum(row['verdict'] == 'ACCEPTED' for row in attempts)}</div></div></div>
+<div class="card"><div class="card-heading"><h2>Measurements</h2><small id="measurement-count">{escape(selected['campaign'] if selected else '')}</small></div><div class="chart" id="chart"></div></div>
+<div class="card"><div class="card-heading"><h2>Experiments</h2></div><div class="table-wrap"><table><thead><tr><th>Attempt</th><th>Decision</th><th id="metric-heading">{escape(objective.get('unit', 'Score'))}</th><th>Hypothesis</th><th>Revision</th><th>Evidence</th></tr></thead><tbody id="attempt-rows">{''.join(rows)}</tbody></table></div><div class="empty" id="attempt-empty" {'hidden' if attempts else ''}>No experiments yet.</div></div>
+<div id="research-status" class="status" role="status" aria-live="polite"></div><div class="page-footer"><span>Acceptance follows the campaign's configured checks.</span><span>Drill</span></div></section>
+<section id="setup-page" class="settings-wrap" aria-labelledby="setup-title" hidden><div class="page-heading"><h1 id="setup-title">Setup</h1></div>
+<form id="setup-form"><div class="card settings-card"><h2>Research driver</h2><div class="field"><label for="driver">Driver</label><select id="driver"><option value="current_agent">Current repository agent</option><option value="model_api">Custom model API</option></select></div><div id="api-fields" hidden><div class="field"><label for="endpoint">API endpoint</label><input id="endpoint" type="url" placeholder="https://api.example.com/v1/chat/completions" autocomplete="off"></div><div class="field-grid"><div class="field"><label for="model">Model</label><input id="model" type="text" placeholder="Model name" autocomplete="off"></div><div class="field"><label for="api_key_env">API key environment variable</label><input id="api_key_env" type="text" placeholder="MODEL_API_KEY" autocomplete="off" spellcheck="false"><span class="field-hint">Environment variable name only.</span></div></div></div></div>
+<div class="card settings-card"><h2>New campaign inputs</h2><label class="check-row"><input type="checkbox" id="submodules">Materialize submodules</label><label class="check-row"><input type="checkbox" id="lfs">Materialize Git LFS files</label><label class="check-row"><input type="checkbox" id="allow_network">Allow fetching missing source inputs</label></div><div class="form-actions"><button id="setup-save" type="submit" class="primary">Save setup</button><div id="setup-status" class="status" role="status" aria-live="polite"></div></div></form>
+<div class="card settings-card" id="model-card" hidden style="margin-top:24px"><h2>Model connection</h2><form id="model-form"><div class="field"><label for="model-prompt">Prompt</label><textarea id="model-prompt" rows="3" placeholder="Enter a prompt" required maxlength="12000"></textarea></div><div class="form-actions"><button type="submit" id="model-call" class="secondary">Call model</button><div id="model-status" class="status" role="status" aria-live="polite"></div></div><pre id="model-output" class="model-output" hidden></pre></form></div>
+</section></main></div><script id="drill-state" type="application/json">{serialized}</script><script>{SCRIPT}</script></body></html>
+'''
 
 
 def dashboard(campaign):
-    status = campaign.status()
-    objective = status['objective']
-    reference = status['incumbent']
-    escape = lambda value: html.escape(str(value), quote=True)
-    scored = [row for row in status['attempts'] if row['score'] is not None]
-    chart = ''
-    if scored:
-        values = [row['score'] for row in scored]
-        low, high = min(values), max(values)
-        span = high - low or max(abs(high) * .1, 1)
-        points = []
-        markers = []
-        for index, row in enumerate(scored):
-            x = 48 + index * 850 / max(len(scored) - 1, 1)
-            y = 180 - (row['score'] - low) / span * 140
-            points.append(f'{x:.2f},{y:.2f}')
-            markers.append(f'<circle cx="{x:.2f}" cy="{y:.2f}" r="5"><title>{escape(row["attempt_id"])} · {escape(row["score"])} {escape(objective["unit"])}</title></circle>')
-        chart = f'<svg viewBox="0 0 960 220" role="img" aria-label="Objective measurements"><text x="8" y="24">{escape(high)}</text><text x="8" y="202">{escape(low)}</text><path d="M48 16V194H930"/><polyline points="{" ".join(points)}"/>{"".join(markers)}</svg>'
-    rows = []
-    for row in reversed(status['attempts']):
-        score = '·' if row['score'] is None else f'{row["score"]:g}'
-        rows.append(f'<tr><td>{escape(row["attempt_id"])}</td><td><span class="badge {escape(row["verdict"].lower())}">{escape(row["verdict"])}</span></td><td>{escape(score)}</td><td class="hypothesis">{escape(row["hypothesis"])}</td><td><code>{escape(row["source_commit"][:10])}</code></td><td><a href="attempts/{escape(row["attempt_id"])}/record.json">JSON ↗</a></td></tr>')
-    current_score = '·' if reference is None else f'{reference["score"]:g}'
-    content = f'''<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{escape(status['name'])}</title>
-<style>
-:root{{color-scheme:light;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#18364b;background:#F5FBFF}}
-*{{box-sizing:border-box}}body{{margin:0}}main{{max-width:1200px;margin:auto;padding:48px 32px}}header{{display:flex;gap:24px;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #4AAEED;padding-bottom:24px}}h1{{font-size:clamp(24px,4vw,38px);font-weight:500;letter-spacing:-1.5px;margin:4px 0 12px}}.eyebrow{{font-size:12px;text-transform:uppercase;letter-spacing:2px;color:#46677c}}.mark{{font-size:28px;line-height:1;letter-spacing:3px;color:#4AAEED;white-space:pre}}.mark svg{{width:64px;height:64px}}.stats{{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:28px 0}}.stat{{background:white;border:1px solid #d7e8f2;padding:20px}}.value{{font-size:32px;margin-top:12px}}.unit{{font-size:13px;color:#46677c}}.chart{{background:white;border:1px solid #d7e8f2;padding:20px;margin-bottom:28px;overflow:hidden}}.chart svg{{display:block;width:100%;max-height:280px}}.chart svg text{{font-size:11px;fill:#46677c}}.chart svg path{{fill:none;stroke:#d7e8f2}}.chart svg polyline{{fill:none;stroke:#4AAEED;stroke-width:2}}.chart svg circle{{fill:white;stroke:#4AAEED;stroke-width:2}}.table-wrap{{overflow-x:auto;border:1px solid #d7e8f2;background:white}}table{{width:100%;border-collapse:collapse;font-size:13px;text-align:left}}th{{font-size:11px;letter-spacing:1px;text-transform:uppercase;background:#edf7fd;color:#46677c}}td,th{{padding:16px;border-bottom:1px solid #e4eef5;white-space:nowrap}}td.hypothesis{{white-space:normal;min-width:220px;line-height:1.6;overflow-wrap:anywhere}}tr:last-child td{{border-bottom:0}}.badge{{display:inline-block;padding:5px 8px;font-size:10px;border:1px solid #d7e8f2}}.accepted,.baseline{{border-color:#4AAEED;background:#edf7fd}}.invalid,.failed{{border-style:dashed}}a{{color:#176b9d;text-underline-offset:4px}}.empty{{padding:32px}}footer{{font-size:11px;color:#46677c;margin-top:20px}}@media(max-width:650px){{main{{padding:28px 16px}}.stats{{gap:8px}}.stat{{padding:12px}}.value{{font-size:25px}}.eyebrow{{font-size:10px;letter-spacing:1px}}.mark{{font-size:20px}}}}
-</style></head><body><main><header><div><div class="eyebrow">Research hub / {escape(status['campaign'])}</div><h1>{escape(status['name'])}</h1><div class="unit">{escape(objective['metric'])} · {escape(objective['direction'])}</div></div><div class="mark">{svg()}</div></header>
-<div class="stats"><div class="stat"><div class="eyebrow">Incumbent</div><div class="value">{escape(current_score)} <span class="unit">{escape(objective['unit'])}</span></div></div><div class="stat"><div class="eyebrow">Experiments</div><div class="value">{status['attempt_count']}</div></div><div class="stat"><div class="eyebrow">Accepted</div><div class="value">{sum(row['verdict'] == 'ACCEPTED' for row in status['attempts'])}</div></div></div>
-{'<div class="chart">' + chart + '</div>' if chart else ''}<div class="table-wrap"><table><thead><tr><th>Attempt</th><th>Decision</th><th>{escape(objective['unit'])}</th><th>Hypothesis</th><th>Revision</th><th>Evidence</th></tr></thead><tbody>{''.join(rows)}</tbody></table>{'<div class="empty">No experiments yet.</div>' if not rows else ''}</div><footer>Acceptance follows this campaign’s configured checks.</footer></main></body></html>
-'''
     path = campaign.path / 'report.html'
-    path.write_text(content)
+    path.write_text(render({'campaigns': [campaign.status()], 'goals': load_goals(campaign.repo), 'settings': load_settings(campaign.repo)}))
     return {'path': str(path)}

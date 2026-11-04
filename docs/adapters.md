@@ -138,6 +138,7 @@ Acceptance is limited to the configured checks and does not itself establish pub
 
 The first version supports macOS and Linux with POSIX locks and process groups.
 Committed source snapshots support ordinary files, directories, and symlinks that remain inside the snapshot.
-Escaping symlinks and Git submodules are rejected.
-Git LFS pointers are ordinary committed files and need a repository-specific evaluator to retrieve and verify their actual data.
+Escaping symlinks are rejected.
+Git submodules require explicit [materialization](data.md).
+Git LFS files require explicit materialization and verified object bytes before evaluation.
 Untracked files, local dependency directories, and ignored files are not included in source snapshots.

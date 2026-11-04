@@ -90,7 +90,10 @@ def records(campaign):
         record = read_json(path)
         seal = directory / 'seal.json'
         if record['verdict'] != 'RUNNING':
-            if not seal.exists() or read_json(seal) != receipt_inventory(directory) or inventory(directory / 'source') != read_json(directory / 'source-hashes.json'):
+            source_hashes = directory / 'source-hashes.json'
+            missing_source = not source_hashes.is_file() and record['verdict'] in {'BASELINE', 'ACCEPTED', 'REJECTED'}
+            changed_source = source_hashes.is_file() and inventory(directory / 'source') != read_json(source_hashes)
+            if not seal.exists() or read_json(seal) != receipt_inventory(directory) or missing_source or changed_source:
                 record = dict(record, verdict='INVALID', score=None, metrics={}, reason='Saved experiment evidence changed.')
         result.append(record)
     valid_references = {row['attempt_id'] for row in result if row['verdict'] == 'BASELINE'}

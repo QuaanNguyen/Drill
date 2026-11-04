@@ -42,9 +42,11 @@ def main():
         report = Path(demo['dashboard'])
         document = report.read_text()
         for target in re.findall(r'href="([^"]+)"', document):
+            if target.startswith('#'):
+                continue
             if not (report.parent / target).is_file():
                 raise RuntimeError(f'Dashboard evidence link is missing: {target}')
-        if '#4AAEED' not in document or '<table>' not in document:
+        if 'prefers-color-scheme' not in document or '<table' not in document:
             raise RuntimeError('Dashboard did not contain its expected local content.')
         checks['toy_loop_and_report_content'] = {'verdict': 'VERIFIED', 'baseline': 25, 'final': 0, 'experiments': 5, 'evidence_links': 'all resolve'}
     if args.xor_repo:

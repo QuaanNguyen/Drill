@@ -70,12 +70,16 @@ def main(bound=None):
     commands = parser.add_subparsers(dest='command', required=True)
     names = ['init', 'baseline', 'workspace', 'step', 'resume', 'status', 'dashboard', 'run']
     if bound is None:
-        names.append('use')
+        names.extend(['use', 'serve', 'model'])
     for name in names:
         sub = commands.add_parser(name)
         if bound is None:
             sub.add_argument('--repo', type=Path, help='Repository root; defaults to the current repository.')
             sub.add_argument('--campaign', help='Campaign name; defaults to the selected campaign.')
+        if name == 'serve':
+            sub.add_argument('--port', type=int, default=8765)
+        if name == 'model':
+            sub.add_argument('--prompt', required=True)
         if name == 'init':
             sub.add_argument('--config', type=Path, required=True)
         if name == 'use':
@@ -95,6 +99,14 @@ def main(bound=None):
     try:
         if bound is None:
             repo = current_repository(args.repo)
+            if args.command == 'serve':
+                from drill.server import serve
+                serve(repo, args.port)
+                return
+            if args.command == 'model':
+                from drill.settings import call_model
+                print(json.dumps(call_model(repo, args.prompt)))
+                return
             worker = current_worker(repo)
             name = args.selection if args.command == 'use' else selected_campaign(args, repo, worker)
             path = campaign_path(repo, name)
@@ -112,6 +124,9 @@ def main(bound=None):
         else:
             if bound is None:
                 validate_campaign(path)
+                if args.command == 'run' and 'agent' not in read_json(path / 'config.json'):
+                    print(json.dumps(Campaign(path).run(args.worker, args.iterations), indent=2, sort_keys=True))
+                    return
                 if args.command == 'step' and args.worker is None and args.revision is None:
                     if worker is not None and worker['campaign'] == name:
                         args.worker = worker['worker']

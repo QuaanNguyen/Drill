@@ -9,6 +9,7 @@ from pathlib import Path
 
 from drill.model import assess, identifier, load_config, validate_result
 from drill.store import digest, fingerprint, incumbent, inventory, lock, now, package_inventory, read_json, records, save_record, validate_campaign, write_json
+from drill.settings import load_goals, load_settings
 from drill.workspace import archive, contained, get_workspace, git, ignore_local, repository, revision, worker_revision
 
 
@@ -46,6 +47,9 @@ def initialize(repo, name, config_path):
     repo = repository(repo)
     campaign = campaign_path(repo, name)
     config = load_config(config_path.resolve())
+    original_config = read_json(config_path.resolve())
+    if 'materialization' not in original_config:
+        config['materialization'] = load_settings(repo)['materialization']
     contained(repo, config['workspace']['root'])
     with lock(repo / '.drill' / '.workspace.lock'):
         if campaign.exists():
@@ -65,13 +69,18 @@ def initialize(repo, name, config_path):
                 destination.parent.mkdir(parents=True)
                 shutil.copy2(source, destination)
                 config[role]['adapter'] = str(destination.relative_to(staging))
-            for relative in config['evaluator']['assets']:
-                target = staging / 'evaluation' / 'assets' / relative
-                target.parent.mkdir(parents=True, exist_ok=True)
-                mode = git(repo, 'ls-tree', initial, '--', relative)
-                if not mode.startswith('100'):
-                    raise ValueError(f'Evaluator asset must be a tracked regular file: {relative}')
-                target.write_bytes(git(repo, 'show', f'{initial}:{relative}', binary=True))
+            if config['evaluator']['assets']:
+                with tempfile.TemporaryDirectory(prefix='.inputs-', dir=staging) as temporary:
+                    inputs = Path(temporary) / 'source'
+                    materialized = archive(repo, initial, inputs, config.get('materialization'))
+                    write_json(staging / 'evaluation' / 'materialization.json', materialized)
+                    for relative in config['evaluator']['assets']:
+                        source = inputs / relative
+                        if not source.is_file() or source.is_symlink() or not source.resolve().is_relative_to(inputs.resolve()):
+                            raise ValueError(f'Evaluator asset must be a tracked regular file: {relative}')
+                        target = staging / 'evaluation' / 'assets' / relative
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copyfile(source, target)
             write_json(staging / 'config.json', config)
             (staging / 'AGENTS.md').write_text(instructions(repo, name, config))
             write_json(staging / 'agents.json', {'schema_version': 1, 'repo': str(repo), 'campaign': name, 'workspace_template': str(repo / config['workspace']['root'] / name / '{worker}'), 'branch_template': f'drill/{name}/{{worker}}', 'instructions': str(campaign / 'AGENTS.md'), 'create_workspace_command': [sys.executable, str(campaign / 'hub.py'), 'workspace', '--worker', '{worker}'], 'candidate_policy': 'Commit source changes in the named managed worktree before evaluation.'})
@@ -157,7 +166,8 @@ class Campaign:
             record = {'schema_version': 1, 'attempt_id': attempt_id, 'role': role, 'worker': worker, 'hypothesis': hypothesis.strip(), 'source_commit': commit, 'source_tree': git(self.repo, 'rev-parse', f'{commit}^{{tree}}'), 'parent': reference['attempt_id'] if reference else None, 'created_at': now(), 'verdict': 'RUNNING', 'score': None, 'metrics': {}, 'context': {}, 'interval': None, 'reason': 'Evaluation has not completed.'}
             save_record(directory, record)
             try:
-                archive(self.repo, commit, directory / 'source')
+                materialized = archive(self.repo, commit, directory / 'source', self.config.get('materialization'))
+                write_json(directory / 'materialization.json', materialized)
                 write_json(directory / 'source-hashes.json', inventory(directory / 'source'))
                 (directory / 'artifacts').mkdir()
                 request = {'schema_version': 1, 'attempt_id': attempt_id, 'role': role, 'operation': 'start', 'source': {'path': str(directory / 'source'), 'commit': commit, 'tree': record['source_tree']}, 'evaluation_fingerprint': self.manifest['evaluation_fingerprint'], 'objective': self.config['objective'], 'constraints': self.config['constraints'], 'assets': str(self.path / 'evaluation' / 'assets'), 'output_dir': str(directory / 'artifacts'), 'reference': reference}
@@ -248,13 +258,13 @@ class Campaign:
                 raise
 
     def run(self, worker, iterations):
-        if 'agent' not in self.config:
-            raise ValueError('Configure an agent adapter before using the automatic research loop.')
         if type(iterations) is not int or not 1 <= iterations <= 100:
             raise ValueError('Iterations must be between 1 and 100.')
         if not incumbent(self.path):
             raise ValueError('Measure a passing baseline before starting the automatic research loop.')
         identity = self.workspace(worker)
+        if 'agent' not in self.config:
+            return {'mode': 'current_agent', 'worker': identity, 'iterations': iterations, 'incumbent': incumbent(self.path), 'objective': self.config['objective'], 'constraints': self.config['constraints'], 'history': records(self.path), 'instructions': str(self.path / 'AGENTS.md'), 'goals': load_goals(self.repo), 'model_settings': load_settings(self.repo), 'task': 'Use the agent already working in this repository. Read the campaign instructions, make one hypothesis, edit and commit in this worker, then evaluate with drill step and inspect the result before continuing. Stop after the requested iteration budget. Do not select a provider or call a separate model API unless the user requests it.'}
         results = []
         with lock(self.path / 'workers' / f'{identifier(worker)}.lock'):
             for _ in range(iterations):

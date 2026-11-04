@@ -84,6 +84,12 @@ def load_config(path):
         raise ValueError('Evaluator assets must be a list of unique repository paths.')
     for asset in assets:
         relative_path(asset)
+    materialization = config.setdefault('materialization', {})
+    if not isinstance(materialization, dict) or set(materialization) - {'submodules', 'lfs', 'allow_network'}:
+        raise ValueError('Materialization accepts submodules, lfs, and allow_network options.')
+    for option in ('submodules', 'lfs', 'allow_network'):
+        if type(materialization.setdefault(option, False)) is not bool:
+            raise ValueError('Materialization options must be true or false.')
     return config
 
 

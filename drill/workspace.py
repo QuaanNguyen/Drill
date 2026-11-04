@@ -1,8 +1,7 @@
-import io
 import subprocess
-import tarfile
 from pathlib import Path
 
+from drill.materialize import archive
 from drill.model import identifier, relative_path
 from drill.store import lock, read_json, write_json
 
@@ -44,22 +43,6 @@ def ignore_local(repo, paths):
     missing = ['/' + value.rstrip('/') + '/' for value in paths if '/' + value.rstrip('/') + '/' not in text.splitlines()]
     if missing:
         exclude.write_text(text.rstrip() + '\n' + '\n'.join(missing) + '\n')
-
-
-def archive(repo, commit, destination):
-    destination.mkdir()
-    data = git(repo, 'archive', '--format=tar', commit, binary=True)
-    with tarfile.open(fileobj=io.BytesIO(data)) as source:
-        for member in source.getmembers():
-            target = destination / member.name
-            if not target.resolve().is_relative_to(destination.resolve()) or member.islnk() or not (member.isfile() or member.isdir() or member.issym()):
-                raise ValueError('Source snapshots require files, directories, and contained symlinks.')
-            if member.issym() and not (target.parent / member.linkname).resolve().is_relative_to(destination.resolve()):
-                raise ValueError('Source symlink escapes the committed snapshot.')
-        source.extractall(destination, filter='data')
-    modules = git(repo, 'ls-tree', '-r', commit)
-    if any(line.startswith('160000 ') for line in modules.splitlines()):
-        raise ValueError('Git submodules require an explicit external artifact adapter and are unsupported in source snapshots.')
 
 
 def registration(repo):

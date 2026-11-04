@@ -3,7 +3,8 @@
 </p>
 
 Drill runs research experiments in a Git repository.
-Connect an evaluator and a coding agent, then let Drill compare committed changes against the best accepted result.
+Provide an evaluator for your project.
+The agent already working in your repository can drive the research while Drill compares committed changes against the best accepted result.
 Each experiment keeps its hypothesis, source revision, measurements, and evidence.
 
 ## Install
@@ -31,7 +32,8 @@ Choose a new destination each time.
 ## Use your repository
 
 Prepare a [configuration and evaluator](docs/setup.md) for the result you want to improve.
-Add a coding-agent adapter to use the automatic loop.
+By default, the agent already working in your repository drives the research.
+Configure a separate coding-agent command only when you want Drill to launch one.
 Then run these commands inside your repository.
 
 ```sh
@@ -48,6 +50,18 @@ You can still pass the repository and campaign explicitly when running several s
 To make a change yourself, run `drill workspace`, edit and commit in the returned checkout, then run `drill step --hypothesis "Explain the expected improvement"` from that checkout.
 Workers stay inside your repository under `.worktrees/drill/<campaign>/<worker>/`.
 Drill keeps existing edits and refuses occupied paths or conflicting branches.
+
+## Open the dashboard
+
+```sh
+drill serve
+```
+
+Open the localhost address printed by the command.
+The dashboard follows your system's light or dark appearance and switches the logo with it.
+Save goals in the sidebar and use Setup for optional model connections and new-campaign data options.
+API keys stay in the server's environment rather than saved settings.
+The default research driver remains your current repository agent.
 
 ## Connect your tools
 

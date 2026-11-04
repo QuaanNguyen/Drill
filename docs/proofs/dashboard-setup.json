@@ -1,0 +1,18 @@
+{
+  "core_tests": 52,
+  "xor_adapter_tests": 8,
+  "xor_model_measurement": false,
+  "installed_package": "VERIFIED",
+  "previous_campaign_protected_files_unchanged": 17,
+  "browser_review": {
+    "light_desktop": "VERIFIED",
+    "dark_desktop": "VERIFIED",
+    "narrow_layout": "VERIFIED",
+    "persisted_goals_and_setup": "VERIFIED",
+    "local_model_transport": "VERIFIED",
+    "empty_campaign": "VERIFIED",
+    "mixed_decisions": "VERIFIED"
+  },
+  "external_model_provider": "NOT VERIFIED",
+  "real_xor_qualification": "NOT VERIFIED"
+}

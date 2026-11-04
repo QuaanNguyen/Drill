@@ -13,7 +13,8 @@ Set the objective, its unit, whether higher or lower is better, and any hard con
 
 An evaluator receives a request file and writes a result file.
 The [adapter reference](adapters.md) defines both formats.
-A coding-agent adapter is optional for manual experiments and required for the automatic loop.
+The agent already working in the repository is the default driver.
+A separate coding-agent command is optional.
 
 ## Measure the baseline
 
@@ -74,7 +75,10 @@ Drill does not reset or remove an occupied worker.
 
 ## Run a coding agent
 
-Configure a coding-agent adapter before starting the loop.
+Without a separate coding-agent command, Drill returns the worker, research context, instructions, and iteration budget to the current agent.
+The current agent performs and evaluates each experiment.
+Drill does not start another model or choose an API.
+An explicitly configured coding-agent command enables the subprocess loop.
 The adapter receives the current best result and experiment history.
 It must commit a new candidate and return its hypothesis.
 
@@ -120,3 +124,22 @@ The evaluator must identify the actual data, runner, settings, and hardware in i
 A changed context prevents comparison.
 Declare trusted evaluator scripts and small fixed inputs as evaluator assets so Drill saves their exact committed bytes.
 Dependencies and external data remain the adapter's responsibility.
+
+## Save goals and custom setup
+
+Run `drill serve` in the project and open its localhost address.
+Goals and setup belong to that repository and survive browser reloads and server restarts.
+They do not rewrite a campaign's saved runtime, evaluation rules, or evidence.
+
+The current repository agent remains the default.
+An optional model connection requires an explicit endpoint, model, and environment-variable name for its API key.
+The connection accepts a chat request with a model and user message and expects a text response in the first choice's message.
+Remote endpoints require HTTPS; HTTP is supported for local model services.
+Saving setup does not call the model.
+Use the model form or `drill model --prompt "Your prompt"` to make an explicit request.
+Model responses do not edit code or commit changes.
+
+Source setup controls [submodule and Git LFS materialization](data.md) for newly initialized campaigns.
+Existing campaigns keep their saved behavior.
+Missing inputs cause an incomplete evaluation without a score.
+Downloads remain disabled unless you enable them explicitly.

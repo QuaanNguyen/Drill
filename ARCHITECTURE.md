@@ -43,5 +43,15 @@ An accepted result does not publish a release or establish model qualification.
 
 The first version uses POSIX locks and process groups on macOS and Linux.
 Source snapshots include committed regular files and contained symlinks.
-They reject submodules and symlinks that escape the snapshot.
-Large data, Git LFS materialization, dependencies, and remote services need project-specific adapters.
+They reject symlinks that escape the snapshot.
+Submodules and LFS objects require explicit materialization options and exact identity checks.
+Submodule and LFS downloads are disabled by default and use owned temporary stores when explicitly enabled.
+Other dependencies and remote evaluation services need project-specific adapters.
+
+## Local dashboard
+
+The loopback server reads each campaign through its saved launcher.
+Goals and nonsecret setup live outside campaign evidence.
+The server reads API keys from environment variables only for explicit model requests.
+Cross-origin changes and model redirects are rejected.
+The UI uses system color preferences and matching monochrome SVGs.

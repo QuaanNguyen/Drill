@@ -67,7 +67,7 @@ def policy_for(worker, readable, editable):
 
 
 def configuration(policy):
-    return {'permission': policy, 'agent': {AGENT: {'mode': 'primary', 'description': 'Restricted baseline research', 'prompt': 'Work only on the supplied research brief and exact editable files. Use relative file paths. Never execute commands, use the network, delegate, load skills, or commit. Return only an unfenced JSON object with one hypothesis string.'}}}
+    return {'permission': policy, 'agent': {AGENT: {'mode': 'primary', 'description': 'Restricted baseline research', 'prompt': 'Work only on the supplied research brief and exact editable files. Use relative file paths. Open exact listed files directly; directory reads are denied. Never execute commands, use the network, delegate, load skills, or commit. Return only an unfenced JSON object with one hypothesis string.'}}}
 
 
 def launch_environment(worker, config, config_path):
@@ -149,7 +149,12 @@ def run(request_path, result_path, launcher, model, timeout):
         raise ValueError('The launcher selected a different research working directory.')
     proof = verify_policy(effective, policy)
     (result_path.parent / 'opencode-policy.json').write_text(json.dumps(proof, indent=2) + '\n')
-    prompt = json.dumps({'working_directory': str(worker), 'instruction': 'Make one concrete improvement. Read only listed repository files with relative paths. Edit only the editable files. Do not guess other filesystem locations. Return only {"hypothesis":"why this change should improve the objective"}. The host will commit and evaluate your edits.', 'brief': research['brief'], 'editable_files': editable, 'baseline_file_examples': readable[:64], 'additional_baseline_files': max(0, len(readable) - 64), 'objective': request['objective'], 'constraints': request['constraints'], 'incumbent': request['incumbent'], 'evaluation_budget_seconds': research['budget_seconds']})
+    history = request.get('history', [])
+    recent = []
+    for attempt in history[-10:]:
+        summary = {key: attempt[key] for key in ('attempt_id', 'hypothesis', 'verdict', 'score', 'source_commit', 'reason') if key in attempt}
+        recent.append({key: value[:256] if isinstance(value, str) else value for key, value in summary.items()})
+    prompt = json.dumps({'working_directory': str(worker), 'instruction': 'Make one concrete improvement. Open exact listed files directly with relative paths; do not read directories. Read only listed repository files. Edit only the editable files. Do not guess other filesystem locations. Return only {"hypothesis":"why this change should improve the objective"}. The host will commit and evaluate your edits.', 'brief': research['brief'], 'editable_files': editable, 'baseline_file_examples': readable[:64], 'additional_baseline_files': max(0, len(readable) - 64), 'objective': request['objective'], 'constraints': request['constraints'], 'incumbent': request['incumbent'], 'history': recent, 'history_total': len(history), 'evaluation_budget_seconds': research['budget_seconds']})
     if len(prompt.encode()) > 65536:
         raise ValueError('The research prompt exceeds the adapter launch limit of 64 KiB.')
     command = [launcher, 'run', '--standalone', '--format', 'json', '--agent', AGENT]

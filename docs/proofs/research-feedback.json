@@ -1,0 +1,17 @@
+{
+  "parent_revision": "db243ca7bfbe9790d144a9dd4319762a0cf63e5f",
+  "before": "Actual launcher prompt omitted history despite request receipts",
+  "after": {
+    "recent_attempts": 10,
+    "string_limit_characters": 256,
+    "total_attempt_count": true,
+    "raw_artifact_bodies_in_prompt": false,
+    "permission_expansion": false
+  },
+  "core_tests": 85,
+  "focused_adapter_tests": 9,
+  "synthetic_xor_evaluator_tests": 8,
+  "installed_package": "VERIFIED",
+  "independent_review": "No blockers",
+  "adapter_sha256": "0f7ce6f6754ea95413140e7c083b9de4b4227239f2bf0f47d714055826b2d40f"
+}

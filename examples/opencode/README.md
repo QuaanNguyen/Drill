@@ -65,7 +65,10 @@ A retained per-run configuration file supplies the restricted policy.
 Inherited custom configuration-file or inline overrides cause a refusal because replacing them could change model routing.
 Configure the provider through the global profile or a profile directory before using this adapter.
 Global files are not edited.
-The model receives the research brief, objective, constraints, current best result, editable files, and evaluation budget.
+The model receives the research brief, objective, constraints, current best result, editable files, evaluation budget, and summaries of the ten most recent attempts.
+Hypotheses and reasons are limited to 256 characters per summary, with the full journal retained by Drill.
+The total attempt count makes the bounded history explicit.
+Open exact files directly; directory reads remain denied.
 Drill supplies the baseline checkout.
 
 The host checks the worker branch, unchanged starting commit, exact changed files, and clean result.

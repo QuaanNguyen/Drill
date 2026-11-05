@@ -31,6 +31,8 @@ if sys.argv[1] == "api":
         rules.append({"action": "bash", "resource": "*", "effect": "allow"})
     print(json.dumps({"location": {"directory": os.environ["PWD"] if mode != "wrong_directory" else str(Path.cwd().parent)}, "data": [{"id": "drill-research", "permissions": rules}]}))
     raise SystemExit()
+if os.environ.get("DRILL_CAPTURE_PROMPT"):
+    Path(os.environ["DRILL_CAPTURE_PROMPT"]).write_text(sys.argv[-1])
 if mode in {"ignoring_parent", "orphan_child"}:
     child = subprocess.Popen([sys.executable, "-c", "import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); print('ready', flush=True); time.sleep(60)"], stdout=subprocess.PIPE, text=True)
     child.stdout.readline()
@@ -199,6 +201,22 @@ class OpenCodeAdapterTests(unittest.TestCase):
                             os.killpg(int(pid_file.read_text().splitlines()[0]), signal.SIGKILL)
                         except ProcessLookupError:
                             pass
+
+    def test_recent_history_is_bounded_and_supplied_to_the_actual_launcher(self):
+        self.configuration['history'] = [{'attempt_id': f'{index:06d}', 'hypothesis': 'h' * 4000, 'verdict': 'REJECTED', 'score': index, 'source_commit': 'c' * 40, 'reason': 'r' * 4000, 'private_artifact_body': 'not a prompt field'} for index in range(12)]
+        captured = self.base / 'captured-prompt.json'
+        with mock.patch.dict(os.environ, {'DRILL_CAPTURE_PROMPT': str(captured)}):
+            result = self.invoke()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        prompt = json.loads(captured.read_text())
+        self.assertIn('history', prompt)
+        self.assertEqual(prompt['history_total'], 12)
+        self.assertEqual([row['attempt_id'] for row in prompt['history']], [f'{index:06d}' for index in range(2, 12)])
+        for row in prompt['history']:
+            self.assertEqual(len(row['hypothesis']), 256)
+            self.assertEqual(len(row['reason']), 256)
+            self.assertNotIn('private_artifact_body', row)
+        self.assertLess(len(captured.read_bytes()), 65536)
 
 
 if __name__ == '__main__':

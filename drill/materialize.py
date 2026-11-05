@@ -24,9 +24,14 @@ def command(repo, *arguments, check=True):
     return result
 
 
-def extract(repo, commit, destination):
+def extract(repo, commit, destination, paths=None):
     destination.mkdir(parents=True, exist_ok=True)
-    data = command(repo, 'archive', '--format=tar', commit).stdout
+    if paths == []:
+        return
+    arguments = ['--literal-pathspecs', 'archive', '--format=tar', commit]
+    if paths is not None:
+        arguments.extend(['--', *paths])
+    data = command(repo, *arguments).stdout
     with tarfile.open(fileobj=io.BytesIO(data)) as source:
         for member in source.getmembers():
             target = destination / member.name
@@ -131,19 +136,35 @@ def fetch_lfs(repo, commit, oid, temporary):
     return result
 
 
-def snapshot(repo, commit, destination, settings, prefix=Path(), depth=0):
+def snapshot(repo, commit, destination, settings, prefix=Path(), depth=0, paths=None):
     if depth > 32:
         raise ValueError('Submodule nesting exceeds the supported depth.')
-    extract(repo, commit, destination)
     entries = command(repo, 'ls-tree', '-rz', commit).stdout.split(b'\0')
     modules = []
+    files = {}
     for entry in entries:
         if not entry:
             continue
         metadata, relative = entry.split(b'\t', 1)
         mode, _, oid = metadata.decode().split()
+        name = relative.decode()
+        files[name] = mode
         if mode == '160000':
-            modules.append((relative.decode(), oid))
+            modules.append((name, oid))
+    direct = None
+    selected_modules = {}
+    if paths is not None:
+        direct = []
+        for name in paths:
+            if files.get(name) in {'100644', '100755'}:
+                direct.append(name)
+                continue
+            parent = next((relative for relative, oid in modules if name.startswith(relative + '/')), None)
+            if parent is None:
+                raise ValueError(f'Selected source must be a tracked regular file: {name}')
+            selected_modules.setdefault(parent, []).append(name[len(parent) + 1:])
+        modules = [(relative, oid) for relative, oid in modules if relative in selected_modules]
+    extract(repo, commit, destination, direct)
     if modules and not settings['submodules']:
         raise ValueError('Enable materialization.submodules to include committed submodule contents.')
     inventory = []
@@ -169,7 +190,7 @@ def snapshot(repo, commit, destination, settings, prefix=Path(), depth=0):
                 command(source, 'remote', 'add', 'origin', url)
                 command(source, 'fetch', '--no-tags', '--depth=1', '--', url, oid)
             inventory.append({'kind': 'submodule', 'path': str(prefix / relative), 'commit': oid})
-            inventory.extend(snapshot(source, oid, target, settings, prefix / relative, depth + 1))
+            inventory.extend(snapshot(source, oid, target, settings, prefix / relative, depth + 1, selected_modules.get(relative) if paths is not None else None))
     for path in sorted(destination.rglob('*')):
         if any(path == destination / relative or (destination / relative) in path.parents for relative, oid in modules):
             continue
@@ -187,11 +208,16 @@ def snapshot(repo, commit, destination, settings, prefix=Path(), depth=0):
                 source = fetch_lfs(repo, commit, oid, Path(scratch))
             verified_copy(source, path, oid, size)
         inventory.append({'kind': 'lfs', 'path': str(prefix / path.relative_to(destination)), 'sha256': oid, 'size': size})
+    if paths is not None:
+        for name in paths:
+            selected = destination / name
+            if not selected.is_file() or selected.is_symlink() or not selected.resolve().is_relative_to(destination.resolve()):
+                raise ValueError(f'Selected source is unavailable in the snapshot: {name}')
     return inventory
 
 
-def archive(repo, commit, destination, materialization=None):
+def archive(repo, commit, destination, materialization=None, paths=None):
     settings = {'submodules': False, 'lfs': False, 'allow_network': False, **(materialization or {})}
     if destination.exists():
         raise ValueError('Source snapshot destination already exists.')
-    return snapshot(repo, commit, destination, settings)
+    return snapshot(repo, commit, destination, settings, paths=paths)

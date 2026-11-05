@@ -74,7 +74,7 @@ def initialize(repo, name, config_path):
             if config['evaluator']['assets']:
                 with tempfile.TemporaryDirectory(prefix='.inputs-', dir=staging) as temporary:
                     inputs = Path(temporary) / 'source'
-                    materialized = archive(repo, initial, inputs, config.get('materialization'))
+                    materialized = archive(repo, initial, inputs, config.get('materialization'), paths=config['evaluator']['assets'])
                     write_json(staging / 'evaluation' / 'materialization.json', materialized)
                     for relative in config['evaluator']['assets']:
                         source = inputs / relative
@@ -184,11 +184,13 @@ class Campaign:
             try:
                 if 'research' in self.config:
                     validate_candidate(self.repo, self.manifest['initial_revision'], commit, self.config['research'])
-                materialized = archive(self.repo, commit, directory / 'source', self.config.get('materialization'))
+                materialized = archive(self.repo, commit, directory / 'source', self.config.get('materialization'), paths=self.config['evaluator'].get('source_paths'))
                 write_json(directory / 'materialization.json', materialized)
                 write_json(directory / 'source-hashes.json', inventory(directory / 'source'))
                 (directory / 'artifacts').mkdir()
                 request = {'schema_version': 1, 'attempt_id': attempt_id, 'role': role, 'operation': 'start', 'source': {'path': str(directory / 'source'), 'commit': commit, 'tree': record['source_tree']}, 'evaluation_fingerprint': self.manifest['evaluation_fingerprint'], 'objective': self.config['objective'], 'constraints': self.config['constraints'], 'assets': str(self.path / 'evaluation' / 'assets'), 'output_dir': str(directory / 'artifacts'), 'reference': reference}
+                if 'source_paths' in self.config['evaluator']:
+                    request['source']['paths'] = self.config['evaluator']['source_paths']
                 if 'research' in self.config:
                     request['research'] = self.config['research']
                 write_json(directory / 'request.json', request)

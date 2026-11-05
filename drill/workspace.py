@@ -1,3 +1,4 @@
+import os
 import subprocess
 from pathlib import Path
 
@@ -7,7 +8,7 @@ from drill.store import lock, read_json, write_json
 
 
 def git(repo, *args, binary=False):
-    process = subprocess.run(['git', '-C', str(repo), *args], capture_output=True)
+    process = subprocess.run(['git', '-C', str(repo), *args], capture_output=True, env=dict(os.environ, GIT_LFS_SKIP_SMUDGE='1'))
     if process.returncode:
         raise ValueError(process.stderr.decode(errors='replace').strip() or 'Git operation failed.')
     return process.stdout if binary else process.stdout.decode().strip()

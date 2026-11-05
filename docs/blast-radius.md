@@ -120,3 +120,16 @@ The [recorded proof](proofs/universal-research.json) and [decision trail](change
 Global plugins, configured launchers, Git configuration, and arbitrary adapters remain trusted code.
 The optional OpenCode adapter currently edits existing regular files and refuses permission-pattern filenames or inherited custom configuration overrides.
 The provider-neutral core supports a broader literal file scope through other adapters and the current-agent handoff.
+
+## Real-repository input acquisition
+
+An LFS-heavy repository exposed two acquisition paths outside the intended experiment.
+Creating a worker could invoke Git LFS smudge, and freezing a few evaluator assets traversed unrelated model data.
+A real Git LFS endpoint recorded two unexpected requests before the worker fix and zero afterward.
+Exact evaluator source selection now excludes unrelated inputs, while selected LFS data still requires explicit verified materialization.
+Asset capture also includes only the declared assets.
+
+Configuration version 3 prevents older clients from silently ignoring the new selection.
+Candidate scope validation still checks the whole commit, not only selected evaluator inputs.
+The [proof](proofs/focused-source-inputs.json) records 84 core tests, explicit materialization regressions, installed-package checks, and unchanged hashes for 22 prior campaign files.
+See the tracked [worker acquisition issue](https://github.com/QuaanNguyen/Drill/issues/9) and [focused input issue](https://github.com/QuaanNguyen/Drill/issues/10).

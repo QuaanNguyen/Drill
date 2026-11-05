@@ -40,6 +40,10 @@ The pointer identifies the data by SHA-256 and size.
 When LFS materialization is enabled, Drill finds the corresponding local LFS object and checks both values before copying it into the source snapshot.
 It checks the copied hash again to catch changes during the copy.
 The original checkout keeps its pointer or existing content unchanged.
+Drill-created worker checkouts retain LFS pointers rather than downloading objects through Git LFS checkout filters.
+This also applies when preparing the next experiment from the incumbent.
+The explicit materialization settings control the evaluated snapshot, not an implicit worker download.
+Create a new campaign to apply this worker-checkout behavior to an older saved runtime.
 
 If an object is missing and downloads are allowed, Drill uses Git LFS in an owned temporary clone.
 Git LFS must be installed and the original repository must have an origin remote.
@@ -54,3 +58,10 @@ The normal source inventory then hashes the real snapshot bytes.
 An unavailable commit, missing object, corrupt hash, wrong size, or escaping symlink cannot provide an evaluation score.
 Existing frozen campaigns keep their original saved code and behavior.
 Create a new campaign to enable these options.
+
+## Unrelated repository data
+
+Use the evaluator's [exact source selection](adapters.md#select-only-the-source-an-evaluator-needs) when an experiment needs only a few committed files.
+This avoids acquiring unrelated models or submodules.
+Selected data still requires the normal materialization options and verified bytes.
+Freezing evaluator assets captures only the declared assets, independently of the evaluation source selection.

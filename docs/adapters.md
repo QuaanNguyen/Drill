@@ -4,6 +4,7 @@
 
 Configuration schema version 1 retains the original workflow.
 Version 2 enables the optional research contract and prevents older clients from ignoring its restrictions.
+Version 3 additionally enables exact evaluation-source selection.
 The evaluator and agent request/result wire schema remains version 1.
 The objective contains a metric name, maximize or minimize direction, display unit, and nonnegative minimum absolute improvement.
 Strict improvement is always required.
@@ -151,3 +152,30 @@ Escaping symlinks are rejected.
 Git submodules require explicit [materialization](data.md).
 Git LFS files require explicit materialization and verified object bytes before evaluation.
 Untracked files, local dependency directories, and ignored files are not included in source snapshots.
+
+## Select only the source an evaluator needs
+
+Configuration version 3 can declare exact source files for each snapshot.
+Older clients refuse this version rather than silently including the whole repository.
+
+```json
+{
+  "schema_version": 3,
+  "evaluator": {
+    "source_paths": ["src/audit.py", "src/helpers.py"]
+  }
+}
+```
+
+Merge this fragment into a complete configuration with its adapter, objective, and other required settings.
+Every selected path must be a tracked regular file at the evaluated revision.
+Names are literal; directories and wildcard expansion are not supported.
+A missing selected file makes the attempt invalid without a score.
+Without this field, snapshots retain the existing whole-repository behavior.
+
+This allows a small source experiment inside a repository containing unrelated model artifacts or submodules.
+Only selected dependencies are materialized, using the same explicit download and byte-verification rules.
+A selected LFS pointer still requires LFS materialization; selection does not treat pointers as model bytes.
+Evaluator assets are captured separately and only for their declared paths.
+Research scope checks still inspect the whole candidate commit, including files excluded from the evaluator snapshot.
+The saved configuration, snapshot inventory, commit identity, and request retain the selection.

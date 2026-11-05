@@ -82,6 +82,13 @@ It prevents an out-of-scope candidate from entering evaluation, but cannot undo 
 Assistant tool permissions are separate from operating-system process isolation and from plugin startup behavior.
 Use a separately verified execution environment when stronger containment is needed.
 
+## Repositories with unrelated data
+
+A project evaluator can [select exact committed source files](adapters.md#select-only-the-source-an-evaluator-needs) using configuration version 3.
+Use this for a small audit or kernel experiment inside a repository that also stores large models.
+Unrelated data is not materialized, while selected data retains its explicit byte-verification requirements.
+The research scope still covers the full candidate commit.
+
 ## Existing campaigns
 
 Only newly initialized campaigns with a saved research section use this workflow.

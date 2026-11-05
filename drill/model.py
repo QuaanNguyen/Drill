@@ -28,10 +28,12 @@ def load_config(path):
     config = json.loads(path.read_text())
     if not isinstance(config, dict):
         raise ValueError('Configuration must be a JSON object.')
-    if type(config.get('schema_version')) is not int or config['schema_version'] not in {1, 2} or not isinstance(config.get('name'), str) or not config['name'].strip():
-        raise ValueError('Configuration requires schema_version 1 or 2 and a name.')
-    if 'research' in config and config['schema_version'] != 2:
-        raise ValueError('Research requires configuration schema_version 2 so older clients cannot silently ignore its restrictions.')
+    if type(config.get('schema_version')) is not int or config['schema_version'] not in {1, 2, 3} or not isinstance(config.get('name'), str) or not config['name'].strip():
+        raise ValueError('Configuration requires schema_version 1, 2, or 3 and a name.')
+    if 'research' in config and config['schema_version'] < 2:
+        raise ValueError('Research requires configuration schema_version 2 or later so older clients cannot silently ignore its restrictions.')
+    if isinstance(config.get('evaluator'), dict) and 'source_paths' in config['evaluator'] and config['schema_version'] < 3:
+        raise ValueError('Source selection requires configuration schema_version 3 so older clients cannot silently ignore its restrictions.')
     objective = config['objective']
     if not isinstance(objective, dict):
         raise ValueError('Objective must be a JSON object.')
@@ -86,6 +88,14 @@ def load_config(path):
         raise ValueError('Evaluator assets must be a list of unique repository paths.')
     for asset in assets:
         relative_path(asset)
+    if 'source_paths' in config['evaluator']:
+        paths = config['evaluator']['source_paths']
+        if not isinstance(paths, list) or not paths or any(not isinstance(name, str) for name in paths) or len(set(paths)) != len(paths):
+            raise ValueError('Evaluator source_paths requires unique exact repository file paths.')
+        for name in paths:
+            path = relative_path(name)
+            if not path.parts or path.as_posix() != name or path.parts[0] in {'.drill', '.worktrees'} or any(ord(c) < 32 for c in name):
+                raise ValueError('Evaluator source files require canonical paths without control characters.')
     materialization = config.setdefault('materialization', {})
     if not isinstance(materialization, dict) or set(materialization) - {'submodules', 'lfs', 'allow_network'}:
         raise ValueError('Materialization accepts submodules, lfs, and allow_network options.')

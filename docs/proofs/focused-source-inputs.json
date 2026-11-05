@@ -1,0 +1,48 @@
+{
+  "parent_revision": "9e3b096c547a802eb95f31718540a77b54446959",
+  "core_tests": 84,
+  "source_selection_tests": 8,
+  "existing_materialization_tests": 12,
+  "synthetic_xor_evaluator_tests": 8,
+  "lfs_worker": {
+    "before": {
+      "batch_http_requests": 2,
+      "worker_creation": "FAILED"
+    },
+    "after": {
+      "batch_http_requests": 0,
+      "worker_creation": "VERIFIED",
+      "pointer_bytes_retained": true
+    }
+  },
+  "saved_campaign_compatibility": {
+    "different_runtime_versions": true,
+    "existing_best_score": 0,
+    "existing_launcher_handled_candidate": true,
+    "new_client_accepts_source_selection_schema": true,
+    "old_client_rejects_source_selection_schema": true,
+    "protected_files_unchanged": 22,
+    "verdict": "VERIFIED",
+    "worker_selected_without_flags": true
+  },
+  "installed_package": {
+    "baseline": 25,
+    "default_selection": true,
+    "final": 0,
+    "independent_saved_launcher": true,
+    "installed_command": true,
+    "iterations": 5,
+    "license_files_included": true,
+    "owned_worker_location": true,
+    "verdict": "VERIFIED"
+  },
+  "independent_review": "No current source blockers",
+  "source_sha256": {
+    "drill/materialize.py": "3befb0d2d9f0f0de3a39468445502e2659545dd2fd126d98e881858a1bd7671d",
+    "drill/workspace.py": "f97c813707810a581c8e386efff3418ace7526324dc4bc60f6d85fc93f53999d",
+    "drill/model.py": "272800afb2b3d2383aebbbd2f0defdd1be0ea18f649f66e71fd4f224f09f7c1f",
+    "drill/engine.py": "e8eb82b12d9486d289b4b0f467ff7e9a0299ba886013105436848becec61ef24"
+  },
+  "model_quality_claim": false,
+  "training_performed": false
+}

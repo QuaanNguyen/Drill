@@ -55,3 +55,13 @@ Goals and nonsecret setup live outside campaign evidence.
 The server reads API keys from environment variables only for explicit model requests.
 Cross-origin changes and model redirects are rejected.
 The UI uses system color preferences and matching monochrome SVGs.
+
+## Portable research campaigns
+
+The optional research contract belongs to the campaign, independently of assistant launchers and evaluator implementations.
+The research module validates exact file scope against the initial revision and prepares incumbent-based checkpoint commits in owned workers.
+It retains losing commits rather than resetting branches.
+The command routes research handoffs through their saved launcher, so an installed client does not replace a campaign's research semantics.
+Assistant-specific tool restrictions belong in optional adapters.
+The core does not depend on XOR or any provider profile.
+See [research behavior and trust limits](docs/research.md).

@@ -99,3 +99,24 @@ python3 tools/check_package.py .checks/dist/*.whl
 
 Use the previous-version compatibility check when changing campaign routing or saved runtime behavior.
 Adapters remain trusted code, and their external measurements and data require project-specific checks.
+
+## Portable research follow-up
+
+New research campaigns require configuration version 2.
+An older client refuses that version before creating a campaign, instead of silently ignoring scope restrictions.
+Existing campaign runtime, configuration, and evidence retain their original hashes.
+
+Candidate validation checks exact changed paths against the initial revision before invoking an evaluator.
+Tests include renamed files, symlinks, Git pathspec syntax, and literal framework route filenames.
+Progression uses checkpoint commits and fast-forward merges, retaining rejected commits and refusing dirty or colliding files.
+
+The optional OpenCode adapter checks the effective directory and exact tool permissions before invoking the configured model.
+Live checks with ordinary OpenCode and a caller-selected ASU launcher completed permitted edits and refused actual forbidden edits.
+Both also completed a full Drill baseline, edit, host commit, and evaluation flow.
+Cancellation checks cover an assistant that ignores termination and an exiting parent with a surviving descendant.
+The adapter kills its owned child group before the campaign's outer termination deadline.
+
+The [recorded proof](proofs/universal-research.json) and [decision trail](changes/universal-research-decisions.tsv) separate these guarantees from operating-system containment and model qualification.
+Global plugins, configured launchers, Git configuration, and arbitrary adapters remain trusted code.
+The optional OpenCode adapter currently edits existing regular files and refuses permission-pattern filenames or inherited custom configuration overrides.
+The provider-neutral core supports a broader literal file scope through other adapters and the current-agent handoff.

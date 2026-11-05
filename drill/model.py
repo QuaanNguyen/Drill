@@ -28,8 +28,10 @@ def load_config(path):
     config = json.loads(path.read_text())
     if not isinstance(config, dict):
         raise ValueError('Configuration must be a JSON object.')
-    if config.get('schema_version') != 1 or not isinstance(config.get('name'), str) or not config['name'].strip():
-        raise ValueError('Configuration requires schema_version 1 and a name.')
+    if type(config.get('schema_version')) is not int or config['schema_version'] not in {1, 2} or not isinstance(config.get('name'), str) or not config['name'].strip():
+        raise ValueError('Configuration requires schema_version 1 or 2 and a name.')
+    if 'research' in config and config['schema_version'] != 2:
+        raise ValueError('Research requires configuration schema_version 2 so older clients cannot silently ignore its restrictions.')
     objective = config['objective']
     if not isinstance(objective, dict):
         raise ValueError('Objective must be a JSON object.')
@@ -90,6 +92,9 @@ def load_config(path):
     for option in ('submodules', 'lfs', 'allow_network'):
         if type(materialization.setdefault(option, False)) is not bool:
             raise ValueError('Materialization options must be true or false.')
+    if 'research' in config:
+        from drill.research import validate_research
+        config['research'] = validate_research(config['research'])
     return config
 
 

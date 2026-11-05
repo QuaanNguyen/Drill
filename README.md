@@ -51,6 +51,13 @@ To make a change yourself, run `drill workspace`, edit and commit in the returne
 Workers stay inside your repository under `.worktrees/drill/<campaign>/<worker>/`.
 Drill keeps existing edits and refuses occupied paths or conflicting branches.
 
+## Run bounded research
+
+Define the research brief, the exact files the agent may change, and an experiment budget in a [research configuration](docs/research.md).
+Drill rejects changes outside that scope and preserves rejected commits while preparing the next experiment from the best accepted result.
+Use your current agent or an optional coding-agent adapter.
+The workflow works through project evaluators without depending on a particular model provider, dataset, or hardware setup.
+
 ## Open the dashboard
 
 ```sh

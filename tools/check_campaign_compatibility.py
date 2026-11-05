@@ -35,7 +35,20 @@ def main():
         after = {name: hashlib.sha256((campaign / name).read_bytes()).hexdigest() for name in names}
         if before != after or selected['incumbent']['score'] != 0 or result['verdict'] != 'REJECTED' or result['worker'] != 'researcher':
             raise RuntimeError('Existing campaign behavior changed.')
-        print(json.dumps({'verdict': 'VERIFIED', 'different_command_versions': True, 'protected_files_unchanged': len(before), 'existing_best_score': 0, 'worker_selected_without_flags': True, 'existing_launcher_handled_candidate': True}, sort_keys=True))
+        config = json.loads((current / 'examples/toy/hub.json').read_text())
+        config['schema_version'] = 2
+        config.pop('agent')
+        config['evaluator']['adapter'] = str(current / 'examples/toy/evaluator.py')
+        config['research'] = {'brief': 'Check explicit versioned research setup.', 'editable_paths': ['parameters.json'], 'max_iterations': 1, 'budget_seconds': 10}
+        config_path = Path(temporary) / 'research.json'
+        config_path.write_text(json.dumps(config))
+        legacy = subprocess.run([sys.executable, '-B', str(previous / 'hub.py'), 'init', '--repo', str(repo), '--campaign', 'research', '--config', str(config_path)], capture_output=True, text=True)
+        if legacy.returncode == 0 or 'schema' not in legacy.stderr.lower() or (repo / '.drill/campaigns/research').exists():
+            raise RuntimeError('The previous client did not refuse the new research configuration.')
+        invoke(current, 'init', '--repo', str(repo), '--campaign', 'research', '--config', str(config_path), cwd=repo)
+        if before != {name: hashlib.sha256((campaign / name).read_bytes()).hexdigest() for name in names}:
+            raise RuntimeError('Creating a research campaign changed the saved previous campaign.')
+        print(json.dumps({'old_client_rejects_research_schema': True, 'new_client_accepts_research_schema': True, 'verdict': 'VERIFIED', 'different_command_versions': True, 'protected_files_unchanged': len(before), 'existing_best_score': 0, 'worker_selected_without_flags': True, 'existing_launcher_handled_candidate': True}, sort_keys=True))
 
 
 if __name__ == '__main__':

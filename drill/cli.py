@@ -124,7 +124,7 @@ def main(bound=None):
         else:
             if bound is None:
                 validate_campaign(path)
-                if args.command == 'run' and 'agent' not in read_json(path / 'config.json'):
+                if args.command == 'run' and not ({'agent', 'research'} & read_json(path / 'config.json').keys()):
                     print(json.dumps(Campaign(path).run(args.worker, args.iterations), indent=2, sort_keys=True))
                     return
                 if args.command == 'step' and args.worker is None and args.revision is None:

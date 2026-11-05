@@ -1,0 +1,73 @@
+{
+  "configuration_schema": 2,
+  "adapter_wire_schema": 1,
+  "core_tests": 75,
+  "synthetic_xor_evaluator_tests": 8,
+  "previous_campaign_compatibility": {
+    "different_command_versions": true,
+    "existing_best_score": 0,
+    "existing_launcher_handled_candidate": true,
+    "new_client_accepts_research_schema": true,
+    "old_client_rejects_research_schema": true,
+    "protected_files_unchanged": 21,
+    "verdict": "VERIFIED",
+    "worker_selected_without_flags": true
+  },
+  "live_campaigns": [
+    {
+      "launcher": "opencode",
+      "baseline": 10,
+      "candidate": 11,
+      "verdict": "ACCEPTED",
+      "host_commit_evaluated": true,
+      "saved_research_scope": [
+        "measurement.json"
+      ],
+      "model_override": false,
+      "model_quality_claim": false
+    },
+    {
+      "launcher": "opencode-asu",
+      "baseline": 10,
+      "candidate": 11,
+      "verdict": "ACCEPTED",
+      "host_commit_evaluated": true,
+      "saved_research_scope": [
+        "measurement.json"
+      ],
+      "model_override": false,
+      "model_quality_claim": false
+    }
+  ],
+  "live_restricted_tool_checks": [
+    {
+      "launcher": "opencode",
+      "permitted_edit": true,
+      "host_created_clean_commit": true,
+      "protected_input_unchanged": true,
+      "out_of_scope_edit_denied_by_runtime": true,
+      "denied_edit_had_no_side_effect": true,
+      "model_override": false,
+      "operating_system_containment": false
+    },
+    {
+      "launcher": "opencode-asu",
+      "permitted_edit": true,
+      "host_created_clean_commit": true,
+      "protected_input_unchanged": true,
+      "out_of_scope_edit_denied_by_runtime": true,
+      "denied_edit_had_no_side_effect": true,
+      "model_override": false,
+      "operating_system_containment": false
+    }
+  ],
+  "source_sha256": {
+    "drill/research.py": "668372cd854c2fcc4c95f6e7b7da076cd0444b0419fec5ded5045a2a30e42622",
+    "drill/model.py": "10eaf39aceb996f54624e5b5b914e1e0adcae61c9e8e3026994cdf631195cb70",
+    "drill/engine.py": "112d7580e52bb32b70be64d85f14e1ce9d0949649d974981cdee62c6c0d6eb57",
+    "examples/opencode/agent.py": "083adb90c34a1fb659bfd6bb8ed2c120f0681b3a31d5c59210d2d2a75782d95e"
+  },
+  "operating_system_containment": false,
+  "training_performed": false,
+  "model_qualification_claim": false
+}

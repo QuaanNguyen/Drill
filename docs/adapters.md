@@ -2,7 +2,9 @@
 
 ## Configuration
 
-The configuration schema version is 1.
+Configuration schema version 1 retains the original workflow.
+Version 2 enables the optional research contract and prevents older clients from ignoring its restrictions.
+The evaluator and agent request/result wire schema remains version 1.
 The objective contains a metric name, maximize or minimize direction, display unit, and nonnegative minimum absolute improvement.
 Strict improvement is always required.
 Zero and negative objective values are supported.
@@ -113,6 +115,13 @@ The adapter owns all remote service details, credentials, and request idempotenc
 The hub never retries a start request automatically.
 A running attempt left by a crash remains incomplete and cannot become an incumbent.
 Inspect the saved request and service evidence before explicitly starting another attempt.
+
+## Research requests
+
+A campaign with a [research section](research.md) includes its normalized brief, editable file list, iteration limit, and local evaluator time budget in evaluation and agent requests.
+Coding-agent requests also identify the initial campaign commit and the prepared starting revision.
+Adapters must not interpret the supplied brief as permission to change the evaluator, frozen assets, or tool policy.
+The campaign validates candidate scope before invoking an evaluator.
 
 ## Coding-agent requests
 

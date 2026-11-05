@@ -10,6 +10,7 @@ from pathlib import Path
 from drill.model import assess, identifier, load_config, validate_result
 from drill.store import digest, fingerprint, incumbent, inventory, lock, now, package_inventory, read_json, records, save_record, validate_campaign, write_json
 from drill.settings import load_goals, load_settings
+from drill.research import prepare_worker, validate_candidate, validate_inputs
 from drill.workspace import archive, contained, get_workspace, git, ignore_local, repository, revision, worker_revision
 
 
@@ -55,6 +56,7 @@ def initialize(repo, name, config_path):
         if campaign.exists():
             raise ValueError('Campaign already exists. Resume it or choose a different campaign name.')
         initial = revision(repo, 'HEAD')
+        validate_inputs(repo, initial, config, config_path.resolve())
         campaign.parent.mkdir(parents=True, exist_ok=True)
         staging = Path(tempfile.mkdtemp(prefix='.init-', dir=campaign.parent))
         try:
@@ -104,7 +106,7 @@ def initialize(repo, name, config_path):
 
 
 def instructions(repo, name, config):
-    return f'''# Research campaign {name}
+    text = f'''# Research campaign {name}
 
 Use the pinned launcher at {repo}/.drill/campaigns/{name}/hub.py.
 Create your workspace with its workspace command and a stable worker name.
@@ -118,6 +120,20 @@ Write research notes inside your own checkout and keep detailed measurement arti
 An ACCEPTED experiment passed this campaign's configured checks.
 It does not authorize publication or replace a project's independent release and qualification requirements.
 '''
+    if 'research' in config:
+        research = config['research']
+        text += f'''
+## Research brief
+
+{research['brief']}
+
+Only these exact files may change: {json.dumps(research['editable_paths'])}.
+Each run allows at most {research['max_iterations']} experiments.
+Each local evaluator invocation has a {research['budget_seconds']}-second ceiling.
+Before the next experiment, call run again to prepare the accepted starting point.
+The surrounding assistant retains its own tool permissions unless a restricted adapter is explicitly configured.
+'''
+    return text
 
 
 class Campaign:
@@ -166,11 +182,15 @@ class Campaign:
             record = {'schema_version': 1, 'attempt_id': attempt_id, 'role': role, 'worker': worker, 'hypothesis': hypothesis.strip(), 'source_commit': commit, 'source_tree': git(self.repo, 'rev-parse', f'{commit}^{{tree}}'), 'parent': reference['attempt_id'] if reference else None, 'created_at': now(), 'verdict': 'RUNNING', 'score': None, 'metrics': {}, 'context': {}, 'interval': None, 'reason': 'Evaluation has not completed.'}
             save_record(directory, record)
             try:
+                if 'research' in self.config:
+                    validate_candidate(self.repo, self.manifest['initial_revision'], commit, self.config['research'])
                 materialized = archive(self.repo, commit, directory / 'source', self.config.get('materialization'))
                 write_json(directory / 'materialization.json', materialized)
                 write_json(directory / 'source-hashes.json', inventory(directory / 'source'))
                 (directory / 'artifacts').mkdir()
                 request = {'schema_version': 1, 'attempt_id': attempt_id, 'role': role, 'operation': 'start', 'source': {'path': str(directory / 'source'), 'commit': commit, 'tree': record['source_tree']}, 'evaluation_fingerprint': self.manifest['evaluation_fingerprint'], 'objective': self.config['objective'], 'constraints': self.config['constraints'], 'assets': str(self.path / 'evaluation' / 'assets'), 'output_dir': str(directory / 'artifacts'), 'reference': reference}
+                if 'research' in self.config:
+                    request['research'] = self.config['research']
                 write_json(directory / 'request.json', request)
                 return self._execute(directory, record, request)
             except (OSError, ValueError, KeyError, TypeError) as exc:
@@ -242,7 +262,10 @@ class Campaign:
         with log_prefix.with_suffix('.stdout.log').open('wb') as stdout, log_prefix.with_suffix('.stderr.log').open('wb') as stderr:
             process = subprocess.Popen(command, cwd=cwd, stdout=stdout, stderr=stderr, env=environment, start_new_session=True)
             try:
-                process.wait(timeout=spec['timeout_seconds'])
+                timeout = spec['timeout_seconds']
+                if role == 'evaluator' and 'research' in self.config:
+                    timeout = min(timeout, self.config['research']['budget_seconds'])
+                process.wait(timeout=timeout)
                 return process.returncode, False
             except subprocess.TimeoutExpired:
                 os.killpg(process.pid, signal.SIGTERM)
@@ -262,15 +285,30 @@ class Campaign:
             raise ValueError('Iterations must be between 1 and 100.')
         if not incumbent(self.path):
             raise ValueError('Measure a passing baseline before starting the automatic research loop.')
+        research = self.config.get('research')
+        if research and iterations > research['max_iterations']:
+            raise ValueError('Requested iterations exceed the saved research budget.')
         identity = self.workspace(worker)
         if 'agent' not in self.config:
+            if research:
+                with lock(self.path / 'workers' / f'{identifier(worker)}.lock'):
+                    reference = incumbent(self.path)
+                    prepare_worker(self, worker, reference)
+                return {'mode': 'current_agent', 'worker': identity, 'iterations': iterations, 'research': research, 'incumbent': reference, 'objective': self.config['objective'], 'constraints': self.config['constraints'], 'history': records(self.path), 'instructions': str(self.path / 'AGENTS.md'), 'task': 'Read the research brief and edit only its exact permitted files in this owned checkout. Commit one candidate, evaluate it with the pinned launcher, and inspect the receipt. Call run again before the next experiment so the worker starts from the accepted result. Stop on an incomplete evaluation or at the iteration budget. The surrounding assistant retains its own tool permissions.'}
             return {'mode': 'current_agent', 'worker': identity, 'iterations': iterations, 'incumbent': incumbent(self.path), 'objective': self.config['objective'], 'constraints': self.config['constraints'], 'history': records(self.path), 'instructions': str(self.path / 'AGENTS.md'), 'goals': load_goals(self.repo), 'model_settings': load_settings(self.repo), 'task': 'Use the agent already working in this repository. Read the campaign instructions, make one hypothesis, edit and commit in this worker, then evaluate with drill step and inspect the result before continuing. Stop after the requested iteration budget. Do not select a provider or call a separate model API unless the user requests it.'}
         results = []
         with lock(self.path / 'workers' / f'{identifier(worker)}.lock'):
             for _ in range(iterations):
+                reference = incumbent(self.path)
+                if research:
+                    prepare_worker(self, worker, reference)
                 before = worker_revision(self.path, self.manifest, self.config, worker)
                 run_dir = Path(tempfile.mkdtemp(prefix=f'{worker}-', dir=self.path / 'agent-runs'))
-                request = {'schema_version': 1, 'worker': identity, 'incumbent': incumbent(self.path), 'objective': self.config['objective'], 'constraints': self.config['constraints'], 'history': records(self.path), 'instructions': str(self.path / 'AGENTS.md'), 'result_path': str(run_dir / 'response.json')}
+                request = {'schema_version': 1, 'worker': identity, 'incumbent': reference, 'objective': self.config['objective'], 'constraints': self.config['constraints'], 'history': records(self.path), 'instructions': str(self.path / 'AGENTS.md'), 'result_path': str(run_dir / 'response.json')}
+                if research:
+                    request['research'] = research
+                    request['initial_revision'] = self.manifest['initial_revision']
+                    request['starting_revision'] = before
                 write_json(run_dir / 'request.json', request)
                 code, timed_out = self._invoke('agent', run_dir / 'request.json', run_dir / 'response.json', Path(identity['path']), run_dir / 'agent')
                 validate_campaign(self.path)
@@ -278,6 +316,8 @@ class Campaign:
                     write_json(run_dir / 'outcome.json', {'status': 'FAILED', 'exit_code': code, 'timed_out': timed_out})
                     raise ValueError(f'Agent command failed. Its checkout and logs are preserved at {run_dir}.')
                 response = read_json(run_dir / 'response.json')
+                if not isinstance(response, dict) or not isinstance(response.get('hypothesis'), str) or not response['hypothesis'].strip():
+                    raise ValueError(f'Agent response requires a concrete hypothesis. Logs are at {run_dir}.')
                 after = worker_revision(self.path, self.manifest, self.config, worker)
                 if after == before:
                     raise ValueError(f'Agent did not commit a new candidate. Logs are at {run_dir}.')

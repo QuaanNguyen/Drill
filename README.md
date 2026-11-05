@@ -12,14 +12,31 @@ Each experiment keeps its hypothesis, source revision, measurements, and evidenc
 Use Python 3.11.8 or later and Git on macOS or Linux.
 Drill has no runtime package dependencies.
 
+Install [pipx](https://pipx.pypa.io/stable/installation/), then install Drill once per machine or environment.
+The installer exposes the `drill` command on your command search path and keeps its Python environment separate from your projects.
+
 ```sh
-git clone https://github.com/QuaanNguyen/Drill.git
-cd Drill
-python3 -m pip install .
+pipx install git+https://github.com/QuaanNguyen/Drill.git
 drill --help
 ```
 
+Run `drill` inside any target Git repository.
+You do not need a Drill source checkout or a copy of Drill in every repository.
+Your project can use any programming language.
+Each repository keeps its own configuration, evaluator, campaigns, and evidence.
+Existing campaigns retain their saved tool code when the installed tool is upgraded.
+
+To upgrade the installed command, run:
+
+```sh
+pipx upgrade drill
+```
+
+For development, clone this repository and install your checkout with `python3 -m pip install -e .`.
+
 ## Try the example
+
+This example requires a Drill development checkout.
 
 ```sh
 python3 examples/toy/demo.py /tmp/drill-demo
@@ -33,6 +50,7 @@ Choose a new destination each time.
 
 Prepare a [configuration and evaluator](docs/setup.md) for the result you want to improve.
 By default, the agent already working in your repository drives the research.
+Your assistant keeps its existing login and model selection; Drill does not require model credentials for this workflow.
 Configure a separate coding-agent command only when you want Drill to launch one.
 Then run these commands inside your repository.
 
@@ -42,6 +60,9 @@ drill baseline
 drill run --iterations 5
 drill dashboard
 ```
+
+Without a coding-agent adapter, the research command returns instructions and context for your current assistant.
+The assistant makes and evaluates the experiments using its existing tools.
 
 Drill remembers the selected campaign.
 Use `drill status` to read its results or `drill use <name>` to switch campaigns.
@@ -66,7 +87,8 @@ drill serve
 
 Open the localhost address printed by the command.
 The dashboard follows your system's light or dark appearance and switches the logo with it.
-Save goals in the sidebar and use Setup for optional model connections and new-campaign data options.
+Save goals in the sidebar and use Setup for new-campaign data options.
+The optional model connection sends explicit text requests; it does not drive research or edit code.
 API keys stay in the server's environment rather than saved settings.
 The default research driver remains your current repository agent.
 

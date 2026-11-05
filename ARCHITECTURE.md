@@ -5,6 +5,22 @@ A worker owns one Git branch and one checkout inside the target repository.
 An evaluator measures a committed source snapshot and returns structured results.
 The comparison code decides whether those results improve the current best accepted experiment.
 
+## Installation and repository ownership
+
+Drill is installed once per machine or environment as a Python command-line tool.
+The installed command discovers the target Git repository from the current directory.
+Each repository owns its campaigns, evaluator adapters, settings, and worker checkouts.
+Campaign initialization saves the runtime needed to preserve that campaign's behavior independently of installed tool upgrades.
+A saved runtime is not a clone of the Drill development repository.
+
+The current-agent handoff is the default research driver.
+The assistant keeps its own authentication, model selection, and tools.
+An optional coding-agent adapter owns launching a separate assistant.
+Direct model connections are optional text requests and do not drive the research loop.
+
+A future cross-repository dashboard is tracked in [the repository overview ticket](https://github.com/QuaanNguyen/Drill/issues/12).
+It should reference repository-owned campaigns and preserve their execution and evidence ownership.
+
 ## Code ownership
 
 `cli.py` resolves the repository and selected campaign and invokes its saved launcher.

@@ -73,12 +73,16 @@ drill workspace --worker worker-a
 Each worker has a separate branch and directory inside the repository.
 Drill does not reset or remove an occupied worker.
 
-## Run a coding agent
+## Run research with your assistant
 
 Without a separate coding-agent command, Drill returns the worker, research context, instructions, and iteration budget to the current agent.
-The current agent performs and evaluates each experiment.
+The current agent performs and evaluates each experiment using its existing login, model, and tools.
+This workflow does not require a model endpoint or key in Drill.
+Each repository can use a different assistant environment.
 Drill does not start another model or choose an API.
 An explicitly configured coding-agent command enables the subprocess loop.
+Provider-specific invocation belongs in that adapter.
+Installing Drill does not install or authenticate a separate coding agent.
 The adapter receives the current best result and experiment history.
 It must commit a new candidate and return its hypothesis.
 
